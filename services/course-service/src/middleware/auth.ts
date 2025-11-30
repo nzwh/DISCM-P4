@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { User } from '../types';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -34,7 +35,7 @@ export async function authenticateToken(
       .eq('id', user.id)
       .single();
 
-    req.user = { ...user, profile };
+    req.user = { ...user, profile } as User;
     next();
   } catch (error) {
     console.error('Auth error:', error);

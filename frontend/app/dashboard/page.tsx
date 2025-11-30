@@ -7,59 +7,79 @@ import Link from 'next/link'
 import { LibraryBig } from 'lucide-react'
 
 export default function Dashboard() {
-//   const router = useRouter()
-//   const [user, setUser] = useState<any>(null)
-//   const [profile, setProfile] = useState<any>(null)
-//   const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [pageName, setPageName] = useState('Dashboard');
 
-//   useEffect(() => {
-//     checkUser()
-//   }, [])
+  useEffect(() => {
+    checkUser()
+  }, [])
 
-//   async function checkUser() {
-//     const { data: { user } } = await supabase.auth.getUser()
+  async function checkUser() {
+    // Check if token exists
+    const token = localStorage.getItem('access_token')
     
-//     if (!user) {
-//       router.push('/')
-//       return
-//     }
+    if (!token) {
+      router.push('/')
+      return
+    }
 
-//     setUser(user)
+    // Verify token and get user
+    const { data: { user }, error } = await supabase.auth.getUser(token)
 
-//     const { data: profile } = await supabase
-//       .from('profiles')
-//       .select('*')
-//       .eq('id', user.id)
-//       .single()
+    if (error || !user) {
+      // Token invalid, clear and redirect
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      router.push('/')
+      return
+    }
 
-//     setProfile(profile)
-//     setLoading(false)
-//   }
+    setUser(user)
 
-//   async function handleLogout() {
-//     await supabase.auth.signOut()
-//     router.push('/')
-//   }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
 
-//   if (loading) {
-//     return (
-//       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-//         <div className="text-xl">Loading...</div>
-//       </div>
-//     )
-//   }
-
-  const profile = {
-    full_name: 'John Doe',
-    role: 'student',
-  };
-
-  const handleLogout = () => {
-    // Placeholder for logout functionality
-    console.log('Logout clicked');
+    setProfile(profile)
+    setLoading(false)
   }
 
-  const [pageName, setPageName] = useState('Dashboard');
+  async function handleLogout() {
+    // Sign out from Supabase
+    await supabase.auth.signOut()
+    
+    // Clear tokens from localStorage
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    
+    // Redirect to login
+    router.push('/')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    )
+  }
+
+  // const profile = {
+  //   full_name: 'John Doe',
+  //   role: 'student',
+  // };
+
+  // const handleLogout = () => {
+  //   // Placeholder for logout functionality
+  //   console.log('Logout clicked');
+  // }
+
+  // const [pageName, setPageName] = useState('Dashboard');
 
   return (
     <div className="bg-linear-to-b from-[#CDCDCD] to-[#F0F0F0] / min-h-screen w-full / flex flex-col justify-center items-center / gap-12 p-4">

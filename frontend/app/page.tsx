@@ -19,9 +19,6 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    //! redirect for now
-    router.push('/dashboard');
-
     // reset states
     setLoading(true);
     setError('');
@@ -31,19 +28,9 @@ export default function LoginPage() {
       if (error) 
         throw error
 
-      // todo: migrate to register page
-      // create or update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: data.user.id,
-          email: data.user.email,
-          full_name: data.user.email?.split('@')[0] || 'User',
-        })
-        .select()
-
-      if (profileError && profileError.code !== '23505') {
-        console.error('Profile error:', profileError)
+      if (data.session) {
+        localStorage.setItem('access_token', data.session.access_token)
+        localStorage.setItem('refresh_token', data.session.refresh_token)
       }
 
       router.push('/dashboard')
@@ -111,6 +98,13 @@ export default function LoginPage() {
             className="w-full bg-linear-to-b from-slate-800 to-slate-600 cursor-pointer text-white py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
+
+          <p className="text-sm text-gray-600 text-center">
+            Don't have an account?{' '}
+            <a href="/signup" className="text-slate-800 font-medium hover:underline">
+              Sign up
+            </a>
+          </p>
         </form>
 
         <aside className="mt-6 text-sm text-gray-600 justify-start flex flex-row items-center gap-2">

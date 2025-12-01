@@ -13,6 +13,7 @@ export default function FacultyPage() {
   const [grades, setGrades] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [isAuthorized, setIsAuthorized] = useState(false)
   
   const [gradeForm, setGradeForm] = useState({
     enrollment_id: '',
@@ -22,32 +23,131 @@ export default function FacultyPage() {
   })
 
   useEffect(() => {
-    loadCourses()
+    checkAuthorization()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function loadCourses() {
+  async function checkAuthorization() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      // Check if token exists - authentication required
+      const token = localStorage.getItem('access_token')
+      
+      if (!token) {
+        // No token found - user must login
         router.push('/')
         return
       }
 
-      const data = await courseService.getCourses(session.access_token)
-      setCourses(data.courses || [])
+      // Call API to verify faculty access
+      try {
+        const validationResponse = await fetch('/api/auth/check-faculty', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'x-access-token': token,
+          },
+        })
+
+        if (!validationResponse.ok) {
+          // Not authorized as faculty or invalid token
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+          
+          // If 401 (unauthorized), redirect to login
+          // If 403 (forbidden), redirect to dashboard
+          if (validationResponse.status === 401) {
+            router.push('/')
+          } else {
+            router.push('/dashboard')
+          }
+          return
+        }
+
+        const validationData = await validationResponse.json()
+        if (!validationData.authorized) {
+          // Server confirmed: not faculty (student or guest)
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+          router.push('/dashboard')
+          return
+        }
+      } catch (apiError) {
+        // If API check fails, treat as unauthorized for security
+        console.error('Server-side validation failed:', apiError)
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        router.push('/')
+        return
+      }
+
+      // CLIENT-SIDE VALIDATION: Additional check for defense in depth
+      // Verify token and get user
+      const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+
+      if (userError || !user) {
+        // Token invalid, clear and redirect to login
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        router.push('/')
+        return
+      }
+
+      // Get user profile to check role
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError || !profile) {
+        // No profile found, redirect to login
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        router.push('/')
+        return
+      }
+
+      // CRITICAL: Only allow faculty role - reject students and guests
+      if (profile.role !== 'faculty') {
+        // User is not faculty (student or guest), redirect to dashboard
+        router.push('/dashboard')
+        return
+      }
+
+      // User is authorized as faculty (both server and client confirmed)
+      setIsAuthorized(true)
+      await loadCourses()
     } catch (err: any) {
-      setError(err.message)
+      console.error('Authorization error:', err)
+      // On any error, clear tokens and redirect to login for security
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      router.push('/')
     } finally {
       setLoading(false)
     }
   }
 
+  async function loadCourses() {
+    try {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        router.push('/')
+        return
+      }
+
+      const data = await courseService.getCourses(token)
+      setCourses(data.courses || [])
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
   async function loadGrades(courseId: string) {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      const token = localStorage.getItem('access_token')
+      if (!token) return
 
-      const data = await gradeService.getCourseGrades(session.access_token, courseId)
+      const data = await gradeService.getCourseGrades(token, courseId)
       setGrades(data.grades || [])
     } catch (err: any) {
       alert(err.message)
@@ -58,10 +158,10 @@ export default function FacultyPage() {
     e.preventDefault()
     
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      const token = localStorage.getItem('access_token')
+      if (!token) return
 
-      await gradeService.uploadGrade(session.access_token, {
+      await gradeService.uploadGrade(token, {
         ...gradeForm,
         percentage: gradeForm.percentage ? parseFloat(gradeForm.percentage) : null
       })
@@ -81,6 +181,21 @@ export default function FacultyPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-xl">Loading...</div>
+      </div>
+    )
+  }
+
+  // If not authorized (not faculty), don't render the page content
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl font-bold text-red-600 mb-2">Access Denied</div>
+          <div className="text-gray-600 mb-4">You do not have permission to access this page.</div>
+          <Link href="/dashboard" className="text-blue-600 hover:text-blue-800 underline">
+            Return to Dashboard
+          </Link>
+        </div>
       </div>
     )
   }

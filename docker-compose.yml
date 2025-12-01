@@ -9,14 +9,17 @@ services:
       args:
         NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_COURSE_SERVICE_URL: ${COURSE_SERVICE_URL:-http://localhost:4001}
+        NEXT_PUBLIC_ENROLL_SERVICE_URL: ${ENROLL_SERVICE_URL:-http://localhost:4002}
+        NEXT_PUBLIC_GRADE_SERVICE_URL: ${GRADE_SERVICE_URL:-http://localhost:4003}
     env_file:
       - .env
     environment:
       - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - NEXT_PUBLIC_COURSE_SERVICE_URL=http://course-service:4001
-      - NEXT_PUBLIC_ENROLL_SERVICE_URL=http://enroll-service:4002
-      - NEXT_PUBLIC_GRADE_SERVICE_URL=http://grade-service:4003
+      - NEXT_PUBLIC_COURSE_SERVICE_URL=${COURSE_SERVICE_URL:-http://localhost:4001}
+      - NEXT_PUBLIC_ENROLL_SERVICE_URL=${ENROLL_SERVICE_URL:-http://localhost:4002}
+      - NEXT_PUBLIC_GRADE_SERVICE_URL=${GRADE_SERVICE_URL:-http://localhost:4003}
     ports:
       - "3000:3000"
     depends_on:

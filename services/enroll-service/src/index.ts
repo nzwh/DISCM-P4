@@ -64,6 +64,22 @@ const authenticateToken = async (
   }
 };
 
+// Root endpoint
+app.get('/', (_req: Request, res: Response): void => {
+  res.json({
+    service: 'enroll-service',
+    status: 'running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      enrollments: '/api/enrollments',
+      enroll: '/api/enroll',
+      drop: '/api/enroll/:id'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check
 app.get('/health', (_req: Request, res: Response): void => {
   res.json({ 

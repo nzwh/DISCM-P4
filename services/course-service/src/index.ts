@@ -18,6 +18,21 @@ const supabase = createClient(
 app.use(cors());
 app.use(express.json());
 
+// Root endpoint
+app.get('/', (req: Request, res: Response) => {
+  res.json({
+    service: 'course-service',
+    status: 'running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      courses: '/api/courses',
+      course: '/api/courses/:id'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check
 app.get('/health', (req: Request, res: Response) => {
   res.json({

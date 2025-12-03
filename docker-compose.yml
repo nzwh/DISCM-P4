@@ -9,17 +9,14 @@ services:
       args:
         NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-        NEXT_PUBLIC_COURSE_SERVICE_URL: ${COURSE_SERVICE_URL:-http://localhost:4001}
-        NEXT_PUBLIC_ENROLL_SERVICE_URL: ${ENROLL_SERVICE_URL:-http://localhost:4002}
-        NEXT_PUBLIC_GRADE_SERVICE_URL: ${GRADE_SERVICE_URL:-http://localhost:4003}
     env_file:
       - .env
     environment:
       - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - NEXT_PUBLIC_COURSE_SERVICE_URL=${COURSE_SERVICE_URL:-http://localhost:4001}
-      - NEXT_PUBLIC_ENROLL_SERVICE_URL=${ENROLL_SERVICE_URL:-http://localhost:4002}
-      - NEXT_PUBLIC_GRADE_SERVICE_URL=${GRADE_SERVICE_URL:-http://localhost:4003}
+      - COURSE_SERVICE_URL=course-service:4001
+      - ENROLL_SERVICE_URL=enroll-service:4002
+      - GRADE_SERVICE_URL=grade-service:4003
     ports:
       - "3000:3000"
     depends_on:
@@ -45,11 +42,9 @@ services:
     networks:
       - enrollment-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    # Health check via gRPC (services have HealthCheck method)
+    # Note: Docker health checks require HTTP, so health checks are disabled
+    # Services can be checked via gRPC HealthCheck method
 
   # Enrollment Service - Handles student enrollments
   enroll-service:
@@ -66,11 +61,9 @@ services:
     networks:
       - enrollment-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    # Health check via gRPC (services have HealthCheck method)
+    # Note: Docker health checks require HTTP, so health checks are disabled
+    # Services can be checked via gRPC HealthCheck method
 
   # Grade Service - Handles grade management
   grade-service:
@@ -87,11 +80,9 @@ services:
     networks:
       - enrollment-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4003/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    # Health check via gRPC (services have HealthCheck method)
+    # Note: Docker health checks require HTTP, so health checks are disabled
+    # Services can be checked via gRPC HealthCheck method
 
 networks:
   enrollment-network:

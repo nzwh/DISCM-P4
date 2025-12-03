@@ -24,6 +24,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY proto ./proto
 
 EXPOSE 4002
 

@@ -33,11 +33,3 @@ export interface CreateCourseDto {
   semester: string;
   year: number;
 }
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-    }
-  }
-}

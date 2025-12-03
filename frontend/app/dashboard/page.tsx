@@ -122,38 +122,40 @@ export default function Dashboard() {
             </p>
           </Link>
 
-          {profile?.role === 'student' && (
-            <>
-              <Link
-                href="/enrollments"
-                className="flex flex-col gap-2 bg-gray-100 hover:bg-gray-200 p-4 rounded-lg transition-colors">
-                <div className="flex flex-row items-center gap-2">
-                  <Inbox size={18} className="text-slate-800"/>
-                  <h3 className="font-semibold text-gray-900 text-lg">
-                    My Enrollments
-                  </h3>
-                  <ChevronRight size={16} strokeWidth={3} className="ml-auto text-gray-500"/> 
-                </div>
-                <p className="text-gray-500 text-sm leading-4.5 tracking-tight">
-                  View all of your currently enrolled courses.
-                </p>
-              </Link>
+          {/* My Enrollments - available to both students and faculty */}
+          {(profile?.role === 'student' || profile?.role === 'faculty') && (
+            <Link
+              href="/enrollments"
+              className="flex flex-col gap-2 bg-gray-100 hover:bg-gray-200 p-4 rounded-lg transition-colors">
+              <div className="flex flex-row items-center gap-2">
+                <Inbox size={18} className="text-slate-800"/>
+                <h3 className="font-semibold text-gray-900 text-lg">
+                  My Enrollments
+                </h3>
+                <ChevronRight size={16} strokeWidth={3} className="ml-auto text-gray-500"/> 
+              </div>
+              <p className="text-gray-500 text-sm leading-4.5 tracking-tight">
+                View all of your currently enrolled courses.
+              </p>
+            </Link>
+          )}
 
-              <Link
-                href="/grades"
-                className="flex flex-col gap-2 bg-gray-100 hover:bg-gray-200 p-4 rounded-lg transition-colors">
-                <div className="flex flex-row items-center gap-2">
-                  <GraduationCap size={18} className="text-slate-800"/>
-                  <h3 className="font-semibold text-gray-900 text-lg">
-                    My Grades
-                  </h3>
-                  <ChevronRight size={16} strokeWidth={3} className="ml-auto text-gray-500"/> 
-                </div>
-                <p className="text-gray-500 text-sm leading-4.5 tracking-tight">
-                  View all of your current academic grades.
-                </p>
-              </Link>
-            </>
+          {/* My Grades - only for students */}
+          {profile?.role === 'student' && (
+            <Link
+              href="/grades"
+              className="flex flex-col gap-2 bg-gray-100 hover:bg-gray-200 p-4 rounded-lg transition-colors">
+              <div className="flex flex-row items-center gap-2">
+                <GraduationCap size={18} className="text-slate-800"/>
+                <h3 className="font-semibold text-gray-900 text-lg">
+                  My Grades
+                </h3>
+                <ChevronRight size={16} strokeWidth={3} className="ml-auto text-gray-500"/> 
+              </div>
+              <p className="text-gray-500 text-sm leading-4.5 tracking-tight">
+                View all of your current academic grades.
+              </p>
+            </Link>
           )}
 
           {profile?.role === 'faculty' && (

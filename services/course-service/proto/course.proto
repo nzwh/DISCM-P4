@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package course;
+
+service CourseService {
+  rpc GetCourses(GetCoursesRequest) returns (GetCoursesResponse);
+  rpc GetCourse(GetCourseRequest) returns (GetCourseResponse);
+  rpc CreateCourse(CreateCourseRequest) returns (CreateCourseResponse);
+  rpc UpdateCourse(UpdateCourseRequest) returns (UpdateCourseResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message GetCoursesRequest {
+  string token = 1;
+}
+
+message GetCoursesResponse {
+  repeated Course courses = 1;
+}
+
+message GetCourseRequest {
+  string token = 1;
+  string id = 2;
+}
+
+message GetCourseResponse {
+  Course course = 1;
+  int32 enrolled_count = 2;
+}
+
+message CreateCourseRequest {
+  string token = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  int32 max_students = 5;
+  string semester = 6;
+  int32 year = 7;
+}
+
+message CreateCourseResponse {
+  string message = 1;
+  Course course = 2;
+}
+
+message UpdateCourseRequest {
+  string token = 1;
+  string id = 2;
+  string name = 3;
+  string description = 4;
+  int32 max_students = 5;
+  bool is_open = 6;
+}
+
+message UpdateCourseResponse {
+  string message = 1;
+  Course course = 2;
+}
+
+message Course {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  string faculty_id = 5;
+  int32 max_students = 6;
+  string semester = 7;
+  int32 year = 8;
+  bool is_open = 9;
+  string created_at = 10;
+  FacultyInfo faculty = 11;
+}
+
+message FacultyInfo {
+  string full_name = 1;
+  string email = 2;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+  string service = 2;
+  string timestamp = 3;
+}
+

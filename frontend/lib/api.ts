@@ -1,24 +1,5 @@
-const COURSE_SERVICE = process.env.NEXT_PUBLIC_COURSE_SERVICE_URL
-const ENROLL_SERVICE = process.env.NEXT_PUBLIC_ENROLL_SERVICE_URL
-const GRADE_SERVICE = process.env.NEXT_PUBLIC_GRADE_SERVICE_URL
-
-// Validate environment variables
-if (!COURSE_SERVICE || !ENROLL_SERVICE || !GRADE_SERVICE) {
-  console.error('Missing service URLs:', {
-    COURSE_SERVICE: !!COURSE_SERVICE,
-    ENROLL_SERVICE: !!ENROLL_SERVICE,
-    GRADE_SERVICE: !!GRADE_SERVICE
-  })
-}
-
-// Debug: Log service URLs (only in development)
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  console.log('Service URLs:', {
-    COURSE_SERVICE,
-    ENROLL_SERVICE,
-    GRADE_SERVICE
-  })
-}
+// Frontend API client - now uses Next.js API routes which internally use gRPC
+const API_BASE = ''; // Use relative paths for Next.js API routes
 
 export async function apiCall(url: string, token: string, options: RequestInit = {}) {
   try {
@@ -27,6 +8,7 @@ export async function apiCall(url: string, token: string, options: RequestInit =
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
+        'x-access-token': token,
         ...options.headers,
       },
     })
@@ -50,29 +32,29 @@ export async function apiCall(url: string, token: string, options: RequestInit =
 }
 
 export const courseService = {
-  getCourses: (token: string) => apiCall(`${COURSE_SERVICE}/api/courses`, token),
-  getCourse: (token: string, id: string) => apiCall(`${COURSE_SERVICE}/api/courses/${id}`, token),
+  getCourses: (token: string) => apiCall(`${API_BASE}/api/courses`, token),
+  getCourse: (token: string, id: string) => apiCall(`${API_BASE}/api/courses/${id}`, token),
 }
 
 export const enrollService = {
-  getEnrollments: (token: string) => apiCall(`${ENROLL_SERVICE}/api/enrollments`, token),
+  getEnrollments: (token: string) => apiCall(`${API_BASE}/api/enrollments`, token),
   enroll: (token: string, courseId: string) => 
-    apiCall(`${ENROLL_SERVICE}/api/enroll`, token, {
+    apiCall(`${API_BASE}/api/enrollments`, token, {
       method: 'POST',
       body: JSON.stringify({ course_id: courseId }),
     }),
   drop: (token: string, enrollmentId: string) =>
-    apiCall(`${ENROLL_SERVICE}/api/enroll/${enrollmentId}`, token, {
+    apiCall(`${API_BASE}/api/enroll/${enrollmentId}`, token, {
       method: 'DELETE',
     }),
 }
 
 export const gradeService = {
-  getGrades: (token: string) => apiCall(`${GRADE_SERVICE}/api/grades`, token),
+  getGrades: (token: string) => apiCall(`${API_BASE}/api/grades`, token),
   getCourseGrades: (token: string, courseId: string) =>
-    apiCall(`${GRADE_SERVICE}/api/grades/course/${courseId}`, token),
+    apiCall(`${API_BASE}/api/grades/course/${courseId}`, token),
   uploadGrade: (token: string, data: any) =>
-    apiCall(`${GRADE_SERVICE}/api/grades`, token, {
+    apiCall(`${API_BASE}/api/grades`, token, {
       method: 'POST',
       body: JSON.stringify(data),
     }),

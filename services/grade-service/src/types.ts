@@ -34,11 +34,3 @@ export interface UpdateGradeDto {
   percentage?: number;
   remarks?: string;
 }
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-    }
-  }
-}

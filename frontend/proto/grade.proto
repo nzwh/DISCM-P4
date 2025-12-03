@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package grade;
+
+service GradeService {
+  rpc GetGrades(GetGradesRequest) returns (GetGradesResponse);
+  rpc GetCourseGrades(GetCourseGradesRequest) returns (GetCourseGradesResponse);
+  rpc UploadGrade(UploadGradeRequest) returns (UploadGradeResponse);
+  rpc UpdateGrade(UpdateGradeRequest) returns (UpdateGradeResponse);
+  rpc DeleteGrade(DeleteGradeRequest) returns (DeleteGradeResponse);
+  rpc GetCourseStats(GetCourseStatsRequest) returns (GetCourseStatsResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message GetGradesRequest {
+  string token = 1;
+}
+
+message GetGradesResponse {
+  repeated GradeWithCourse grades = 1;
+}
+
+message GetCourseGradesRequest {
+  string token = 1;
+  string course_id = 2;
+}
+
+message GetCourseGradesResponse {
+  repeated GradeWithStudent grades = 1;
+  string course_id = 2;
+}
+
+message UploadGradeRequest {
+  string token = 1;
+  string enrollment_id = 2;
+  string grade = 3;
+  double percentage = 4;
+  string remarks = 5;
+}
+
+message UploadGradeResponse {
+  string message = 1;
+  Grade grade = 2;
+}
+
+message UpdateGradeRequest {
+  string token = 1;
+  string id = 2;
+  string grade = 3;
+  double percentage = 4;
+  string remarks = 5;
+}
+
+message UpdateGradeResponse {
+  string message = 1;
+  Grade grade = 2;
+}
+
+message DeleteGradeRequest {
+  string token = 1;
+  string id = 2;
+}
+
+message DeleteGradeResponse {
+  string message = 1;
+}
+
+message GetCourseStatsRequest {
+  string token = 1;
+  string course_id = 2;
+}
+
+message GetCourseStatsResponse {
+  CourseStats stats = 1;
+  string course_id = 2;
+}
+
+message Grade {
+  string id = 1;
+  string enrollment_id = 2;
+  string grade = 3;
+  double percentage = 4;
+  string remarks = 5;
+  string uploaded_by = 6;
+  string created_at = 7;
+}
+
+message GradeWithCourse {
+  string id = 1;
+  string grade = 2;
+  double percentage = 3;
+  string remarks = 4;
+  string created_at = 5;
+  CourseInfo course = 6;
+}
+
+message GradeWithStudent {
+  string id = 1;
+  string grade = 2;
+  double percentage = 3;
+  string remarks = 4;
+  string enrollment_id = 5;
+  StudentInfo student = 6;
+}
+
+message CourseInfo {
+  string code = 1;
+  string name = 2;
+  string semester = 3;
+  int32 year = 4;
+}
+
+message StudentInfo {
+  string full_name = 1;
+  string email = 2;
+}
+
+message CourseStats {
+  int32 total_graded = 1;
+  string average = 2;
+  double highest = 3;
+  double lowest = 4;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+  string service = 2;
+  string timestamp = 3;
+}
+

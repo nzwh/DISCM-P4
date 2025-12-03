@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package enroll;
+
+service EnrollService {
+  rpc GetEnrollments(GetEnrollmentsRequest) returns (GetEnrollmentsResponse);
+  rpc Enroll(EnrollRequest) returns (EnrollResponse);
+  rpc Drop(DropRequest) returns (DropResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message GetEnrollmentsRequest {
+  string token = 1;
+}
+
+message GetEnrollmentsResponse {
+  repeated EnrollmentWithCourse enrollments = 1;
+}
+
+message EnrollRequest {
+  string token = 1;
+  string course_id = 2;
+}
+
+message EnrollResponse {
+  string message = 1;
+  Enrollment enrollment = 2;
+}
+
+message DropRequest {
+  string token = 1;
+  string id = 2;
+}
+
+message DropResponse {
+  string message = 1;
+}
+
+message Enrollment {
+  string id = 1;
+  string student_id = 2;
+  string course_id = 3;
+  string status = 4;
+  string enrolled_at = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message EnrollmentWithCourse {
+  string id = 1;
+  string student_id = 2;
+  string course_id = 3;
+  string status = 4;
+  string enrolled_at = 5;
+  string created_at = 6;
+  string updated_at = 7;
+  CourseInfo courses = 8;
+}
+
+message CourseInfo {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string semester = 4;
+  int32 year = 5;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+  string service = 2;
+  string timestamp = 3;
+}
+

@@ -11,26 +11,34 @@ export interface Course {
   id: string;
   code: string;
   name: string;
-  semester: string;
-  year: number;
-  is_open: boolean;
+  description?: string;
+}
+
+export interface Section {
+  id: string;
+  course_id: string;
+  faculty_id: string;
+  name: string;
   max_students: number;
   created_at?: string;
-  updated_at?: string;
+  semester: string;
+  year: string;
+  is_open: boolean;
 }
 
 export interface Enrollment {
   id: string;
   student_id: string;
-  course_id: string;
+  section_id: string;
   status: 'enrolled' | 'dropped';
   enrolled_at?: string;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export interface EnrollmentWithCourse extends Enrollment {
-  courses: Course;
+  courses: Course & {
+    semester: string;
+    year: string;
+  };
 }
 
 export interface AuthenticatedUser extends User {

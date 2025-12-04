@@ -69,16 +69,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { course_id } = body;
+    const { section_id } = body;
 
-    if (!course_id) {
-      return NextResponse.json({ error: 'course_id is required' }, { status: 400 });
+    if (!section_id) {
+      return NextResponse.json({ error: 'section_id is required' }, { status: 400 });
     }
 
     const client = getEnrollClient();
     
     return new Promise<NextResponse>((resolve) => {
-      client.Enroll({ token, course_id }, (error: any, response: any) => {
+      client.Enroll({ token, section_id }, (error: any, response: any) => {
         if (error) {
           console.error('gRPC error:', error);
           const status = error.code === grpc.status.UNAUTHENTICATED ? 401

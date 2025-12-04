@@ -67,15 +67,19 @@ const enrollService = {
       }
 
       const { data, error } = await supabase
-        .from('enrollments')
+        .from('students')
         .select(`
           *,
-          courses (
+          sections!inner (
             id,
-            code,
             name,
             semester,
-            year
+            year,
+            courses (
+              id,
+              code,
+              name
+            )
           )
         `)
         .eq('student_id', user.id)
@@ -87,17 +91,15 @@ const enrollService = {
       const enrollments = (data as EnrollmentWithCourse[] || []).map((e: any) => ({
         id: e.id,
         student_id: e.student_id,
-        course_id: e.course_id,
+        section_id: e.section_id,
         status: e.status,
         enrolled_at: e.enrolled_at || '',
-        created_at: e.created_at || '',
-        updated_at: e.updated_at || '',
-        courses: e.courses ? {
-          id: e.courses.id,
-          code: e.courses.code,
-          name: e.courses.name,
-          semester: e.courses.semester,
-          year: e.courses.year
+        courses: e.sections?.courses ? {
+          id: e.sections.courses.id,
+          code: e.sections.courses.code,
+          name: e.sections.courses.name,
+          semester: e.sections.semester,
+          year: e.sections.year
         } : null
       }));
 
@@ -113,7 +115,16 @@ const enrollService = {
 
   Enroll: async (call: any, callback: any) => {
     try {
-      const { token, course_id } = call.request;
+      const { token, section_id } = call.request;
+      
+      // Support backward compatibility: if course_id is provided, we need to find a section
+      // For now, we'll require section_id
+      if (!section_id) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: 'section_id is required'
+        });
+      }
       
       const user = await authenticateToken(token);
       if (!user) {
@@ -131,49 +142,47 @@ const enrollService = {
         });
       }
 
-      // Check if course exists and is open
-      const { data: course } = await supabase
-        .from('courses')
+      // Check if section exists and is open
+      const { data: section } = await supabase
+        .from('sections')
         .select('*')
-        .eq('id', course_id)
+        .eq('id', section_id)
         .single();
 
-      if (!course) {
+      if (!section) {
         return callback({
           code: grpc.status.NOT_FOUND,
-          message: 'Course not found'
+          message: 'Section not found'
         });
       }
 
-      const typedCourse = course as Course;
-
-      if (!typedCourse.is_open) {
+      if (!section.is_open) {
         return callback({
           code: grpc.status.FAILED_PRECONDITION,
-          message: 'Course is not open'
+          message: 'Section is not open'
         });
       }
 
       // Check enrollment count
       const { count } = await supabase
-        .from('enrollments')
+        .from('students')
         .select('*', { count: 'exact', head: true })
-        .eq('course_id', course_id)
+        .eq('section_id', section_id)
         .eq('status', 'enrolled');
 
-      if (count !== null && count >= typedCourse.max_students) {
+      if (count !== null && count >= section.max_students) {
         return callback({
           code: grpc.status.RESOURCE_EXHAUSTED,
-          message: 'Course is full'
+          message: 'Section is full'
         });
       }
 
       // Check if enrollment already exists (any status)
       const { data: existing } = await supabase
-        .from('enrollments')
+        .from('students')
         .select('*')
         .eq('student_id', user.id)
-        .eq('course_id', course_id)
+        .eq('section_id', section_id)
         .maybeSingle();
 
       if (existing) {
@@ -188,7 +197,7 @@ const enrollService = {
         // If previously dropped, re-enroll by updating status
         if (existing.status === 'dropped') {
           const { data: updatedData, error: updateError } = await supabase
-            .from('enrollments')
+            .from('students')
             .update({ 
               status: 'enrolled',
               enrolled_at: new Date().toISOString()
@@ -202,11 +211,9 @@ const enrollService = {
           const enrollment = {
             id: updatedData.id,
             student_id: updatedData.student_id,
-            course_id: updatedData.course_id,
+            section_id: updatedData.section_id,
             status: updatedData.status,
-            enrolled_at: updatedData.enrolled_at || '',
-            created_at: updatedData.created_at || '',
-            updated_at: updatedData.updated_at || ''
+            enrolled_at: updatedData.enrolled_at || ''
           };
 
           return callback(null, {
@@ -218,10 +225,10 @@ const enrollService = {
 
       // Create new enrollment
       const { data, error } = await supabase
-        .from('enrollments')
+        .from('students')
         .insert([{
           student_id: user.id,
-          course_id: course_id,
+          section_id: section_id,
           status: 'enrolled'
         }])
         .select()
@@ -232,11 +239,9 @@ const enrollService = {
       const enrollment = {
         id: data.id,
         student_id: data.student_id,
-        course_id: data.course_id,
+        section_id: data.section_id,
         status: data.status,
-        enrolled_at: data.enrolled_at || '',
-        created_at: data.created_at || '',
-        updated_at: data.updated_at || ''
+        enrolled_at: data.enrolled_at || ''
       };
 
       callback(null, {
@@ -265,7 +270,7 @@ const enrollService = {
       }
 
       const { data: enrollment } = await supabase
-        .from('enrollments')
+        .from('students')
         .select('student_id')
         .eq('id', id)
         .single();
@@ -278,7 +283,7 @@ const enrollService = {
       }
 
       const { error } = await supabase
-        .from('enrollments')
+        .from('students')
         .update({ status: 'dropped' })
         .eq('id', id);
 

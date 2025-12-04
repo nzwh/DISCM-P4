@@ -17,19 +17,26 @@ export interface Course {
   code: string;
   name: string;
   description?: string;
-  faculty_id?: string;
+}
+
+export interface Section {
+  id: string;
+  course_id: string;
+  faculty_id: string;
+  name: string;
   max_students: number;
+  created_at?: string;
   semester: string;
-  year: number;
+  year: string;
   is_open: boolean;
-  created_at: string;
 }
 
 export interface CreateCourseDto {
   code: string;
   name: string;
   description?: string;
+  section_name?: string;
   max_students?: number;
   semester: string;
-  year: number;
+  year: string;
 }

@@ -33,8 +33,8 @@ export default function CoursesPage() {
     }
   }
 
-  async function handleEnroll(courseId: string) {
-    setEnrolling(courseId)
+  async function handleEnroll(sectionId: string) {
+    setEnrolling(sectionId)
     try {
       const token = localStorage.getItem('access_token')
       if (!token) {
@@ -42,7 +42,7 @@ export default function CoursesPage() {
         return
       }
 
-      await enrollService.enroll(token, courseId)
+      await enrollService.enroll(token, sectionId)
       alert('Enrolled successfully!')
     } catch (err: any) {
       alert(err.message)
@@ -95,6 +95,9 @@ export default function CoursesPage() {
                     {course.code}
                   </h3>
                   <p className="text-gray-700 font-medium">{course.name}</p>
+                  {course.section_name && (
+                    <p className="text-gray-600 text-sm mt-1">Section: {course.section_name}</p>
+                  )}
                 </div>
 
                 <p className="text-gray-600 text-sm mb-4">
@@ -108,7 +111,7 @@ export default function CoursesPage() {
                 </div>
 
                 <button
-                  onClick={() => handleEnroll(course.id)}
+                  onClick={() => handleEnroll(course.section_id || course.id)}
                   disabled={enrolling === course.id}
                   className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >

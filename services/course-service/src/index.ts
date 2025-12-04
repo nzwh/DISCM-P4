@@ -61,34 +61,44 @@ const courseService = {
         });
       }
 
+      // Get sections (which are the enrollable units) with course and faculty info
       const { data, error } = await supabase
-        .from('courses')
+        .from('sections')
         .select(`
           *,
+          courses (
+            id,
+            code,
+            name,
+            description
+          ),
           faculty:faculty_id (
             full_name,
             email
           )
         `)
         .eq('is_open', true)
-        .order('code');
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const courses = (data || []).map((c: any) => ({
-        id: c.id,
-        code: c.code,
-        name: c.name,
-        description: c.description || '',
-        faculty_id: c.faculty_id || '',
-        max_students: c.max_students,
-        semester: c.semester,
-        year: c.year,
-        is_open: c.is_open,
-        created_at: c.created_at,
-        faculty: c.faculty ? {
-          full_name: c.faculty.full_name,
-          email: c.faculty.email
+      const courses = (data || []).map((s: any) => ({
+        id: s.id, // section id
+        section_id: s.id,
+        course_id: s.course_id,
+        code: s.courses?.code || '',
+        name: s.courses?.name || '',
+        description: s.courses?.description || '',
+        section_name: s.name || '',
+        faculty_id: s.faculty_id || '',
+        max_students: s.max_students,
+        semester: s.semester,
+        year: s.year,
+        is_open: s.is_open,
+        created_at: s.created_at,
+        faculty: s.faculty ? {
+          full_name: s.faculty.full_name,
+          email: s.faculty.email
         } : null
       }));
 
@@ -114,10 +124,17 @@ const courseService = {
         });
       }
 
+      // Get section (id is section_id now)
       const { data, error } = await supabase
-        .from('courses')
+        .from('sections')
         .select(`
           *,
+          courses (
+            id,
+            code,
+            name,
+            description
+          ),
           faculty:faculty_id (
             full_name,
             email
@@ -130,21 +147,24 @@ const courseService = {
       if (!data) {
         return callback({
           code: grpc.status.NOT_FOUND,
-          message: 'Course not found'
+          message: 'Section not found'
         });
       }
 
       const { count } = await supabase
-        .from('enrollments')
+        .from('students')
         .select('*', { count: 'exact', head: true })
-        .eq('course_id', id)
+        .eq('section_id', id)
         .eq('status', 'enrolled');
 
       const course = {
-        id: data.id,
-        code: data.code,
-        name: data.name,
-        description: data.description || '',
+        id: data.id, // section id
+        section_id: data.id,
+        course_id: data.course_id,
+        code: data.courses?.code || '',
+        name: data.courses?.name || '',
+        description: data.courses?.description || '',
+        section_name: data.name || '',
         faculty_id: data.faculty_id || '',
         max_students: data.max_students,
         semester: data.semester,
@@ -169,7 +189,7 @@ const courseService = {
 
   CreateCourse: async (call: any, callback: any) => {
     try {
-      const { token, code, name, description, max_students, semester, year } = call.request;
+      const { token, code, name, description, section_name, max_students, semester, year } = call.request;
       
       const auth = await authenticateToken(token);
       if (!auth) {
@@ -193,13 +213,48 @@ const courseService = {
         });
       }
 
-      const { data, error } = await supabase
+      // First, check if course exists, if not create it
+      let { data: existingCourse } = await supabase
         .from('courses')
+        .select('id')
+        .eq('code', code)
+        .maybeSingle();
+
+      let courseId: string;
+      
+      if (!existingCourse) {
+        // Create new course
+        const { data: newCourse, error: courseError } = await supabase
+          .from('courses')
+          .insert([{
+            code,
+            name,
+            description: description || null
+          }])
+          .select()
+          .single();
+
+        if (courseError) {
+          if (courseError.code === '23505') {
+            return callback({
+              code: grpc.status.ALREADY_EXISTS,
+              message: 'Course code already exists'
+            });
+          }
+          throw courseError;
+        }
+        courseId = newCourse.id;
+      } else {
+        courseId = existingCourse.id;
+      }
+
+      // Create section for this course
+      const { data: section, error: sectionError } = await supabase
+        .from('sections')
         .insert([{
-          code,
-          name,
-          description: description || null,
+          course_id: courseId,
           faculty_id: auth.user.id,
+          name: section_name || `${code} Section`,
           max_students: max_students || 30,
           semester,
           year,
@@ -208,32 +263,27 @@ const courseService = {
         .select()
         .single();
 
-      if (error) {
-        if (error.code === '23505') {
-          return callback({
-            code: grpc.status.ALREADY_EXISTS,
-            message: 'Course code already exists'
-          });
-        }
-        throw error;
-      }
+      if (sectionError) throw sectionError;
 
       const course = {
-        id: data.id,
-        code: data.code,
-        name: data.name,
-        description: data.description || '',
-        faculty_id: data.faculty_id || '',
-        max_students: data.max_students,
-        semester: data.semester,
-        year: data.year,
-        is_open: data.is_open,
-        created_at: data.created_at,
+        id: section.id, // return section id
+        section_id: section.id,
+        course_id: section.course_id,
+        code: code,
+        name: name,
+        description: description || '',
+        section_name: section.name,
+        faculty_id: section.faculty_id,
+        max_students: section.max_students,
+        semester: section.semester,
+        year: section.year,
+        is_open: section.is_open,
+        created_at: section.created_at,
         faculty: null
       };
 
       callback(null, {
-        message: 'Course created successfully',
+        message: 'Course and section created successfully',
         course
       });
     } catch (error: any) {
@@ -247,7 +297,7 @@ const courseService = {
 
   UpdateCourse: async (call: any, callback: any) => {
     try {
-      const { token, id, name, description, max_students, is_open } = call.request;
+      const { token, id, name, description, section_name, max_students, is_open } = call.request;
       
       const auth = await authenticateToken(token);
       if (!auth) {
@@ -264,45 +314,80 @@ const courseService = {
         });
       }
 
-      const { data: course } = await supabase
-        .from('courses')
-        .select('faculty_id')
+      // id is section_id now
+      const { data: section } = await supabase
+        .from('sections')
+        .select('faculty_id, course_id')
         .eq('id', id)
         .single();
 
-      if (!course || course.faculty_id !== auth.user.id) {
+      if (!section || section.faculty_id !== auth.user.id) {
         return callback({
           code: grpc.status.PERMISSION_DENIED,
-          message: 'Cannot update this course'
+          message: 'Cannot update this section'
         });
       }
 
-      const updateData: any = {};
-      if (name !== undefined) updateData.name = name;
-      if (description !== undefined) updateData.description = description;
-      if (max_students !== undefined) updateData.max_students = max_students;
-      if (is_open !== undefined) updateData.is_open = is_open;
+      // Update section
+      const sectionUpdateData: any = {};
+      if (section_name !== undefined) sectionUpdateData.name = section_name;
+      if (max_students !== undefined) sectionUpdateData.max_students = max_students;
+      if (is_open !== undefined) sectionUpdateData.is_open = is_open;
 
-      const { data, error } = await supabase
-        .from('courses')
-        .update(updateData)
+      if (Object.keys(sectionUpdateData).length > 0) {
+        const { error: sectionError } = await supabase
+          .from('sections')
+          .update(sectionUpdateData)
+          .eq('id', id);
+
+        if (sectionError) throw sectionError;
+      }
+
+      // Update course if name or description changed
+      const courseUpdateData: any = {};
+      if (name !== undefined) courseUpdateData.name = name;
+      if (description !== undefined) courseUpdateData.description = description;
+
+      if (Object.keys(courseUpdateData).length > 0) {
+        const { error: courseError } = await supabase
+          .from('courses')
+          .update(courseUpdateData)
+          .eq('id', section.course_id);
+
+        if (courseError) throw courseError;
+      }
+
+      // Fetch updated data
+      const { data: updatedSection, error: fetchError } = await supabase
+        .from('sections')
+        .select(`
+          *,
+          courses (
+            id,
+            code,
+            name,
+            description
+          )
+        `)
         .eq('id', id)
-        .select()
         .single();
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
 
       const updatedCourse = {
-        id: data.id,
-        code: data.code,
-        name: data.name,
-        description: data.description || '',
-        faculty_id: data.faculty_id || '',
-        max_students: data.max_students,
-        semester: data.semester,
-        year: data.year,
-        is_open: data.is_open,
-        created_at: data.created_at,
+        id: updatedSection.id,
+        section_id: updatedSection.id,
+        course_id: updatedSection.course_id,
+        code: updatedSection.courses?.code || '',
+        name: updatedSection.courses?.name || '',
+        description: updatedSection.courses?.description || '',
+        section_name: updatedSection.name,
+        faculty_id: updatedSection.faculty_id || '',
+        max_students: updatedSection.max_students,
+        semester: updatedSection.semester,
+        year: updatedSection.year,
+        is_open: updatedSection.is_open,
+        created_at: updatedSection.created_at,
         faculty: null
       };
 

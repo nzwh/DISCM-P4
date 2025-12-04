@@ -14,9 +14,9 @@ export default function FacultyPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isAuthorized, setIsAuthorized] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState<any>(null)
   
-  const [gradeForm, setGradeForm] = useState({
-    enrollment_id: '',
+  const [updateGradeForm, setUpdateGradeForm] = useState({
     grade: '',
     percentage: '',
     remarks: ''
@@ -115,7 +115,7 @@ export default function FacultyPage() {
 
       // User is authorized as faculty (both server and client confirmed)
       setIsAuthorized(true)
-      await loadCourses()
+      await loadCourses(user.id)
     } catch (err: any) {
       console.error('Authorization error:', err)
       // On any error, clear tokens and redirect to login for security
@@ -127,7 +127,7 @@ export default function FacultyPage() {
     }
   }
 
-  async function loadCourses() {
+  async function loadCourses(facultyUserId: string) {
     try {
       const token = localStorage.getItem('access_token')
       if (!token) {
@@ -136,7 +136,11 @@ export default function FacultyPage() {
       }
 
       const data = await courseService.getCourses(token)
-      setCourses(data.courses || [])
+      // Filter to only show courses where this faculty is the instructor
+      const facultyCourses = (data.courses || []).filter(
+        (course: any) => course.faculty_id === facultyUserId
+      )
+      setCourses(facultyCourses)
     } catch (err: any) {
       setError(err.message)
     }
@@ -144,30 +148,42 @@ export default function FacultyPage() {
 
   async function loadGrades(courseId: string) {
     try {
+      setLoading(true)
       const token = localStorage.getItem('access_token')
       if (!token) return
 
       const data = await gradeService.getCourseGrades(token, courseId)
       setGrades(data.grades || [])
+      setSelectedStudent(null)
+      setUpdateGradeForm({ grade: '', percentage: '', remarks: '' })
     } catch (err: any) {
       alert(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
-  async function handleUploadGrade(e: React.FormEvent) {
+  async function handleUpdateGrade(e: React.FormEvent) {
     e.preventDefault()
     
+    if (!selectedStudent) {
+      alert('Please select a student first')
+      return
+    }
+
     try {
       const token = localStorage.getItem('access_token')
       if (!token) return
 
-      await gradeService.uploadGrade(token, {
-        ...gradeForm,
-        percentage: gradeForm.percentage ? parseFloat(gradeForm.percentage) : null
+      await gradeService.updateGrade(token, selectedStudent.id, {
+        grade: updateGradeForm.grade,
+        percentage: updateGradeForm.percentage ? parseFloat(updateGradeForm.percentage) : undefined,
+        remarks: updateGradeForm.remarks || undefined
       })
 
-      alert('Grade uploaded successfully!')
-      setGradeForm({ enrollment_id: '', grade: '', percentage: '', remarks: '' })
+      alert('Grade updated successfully!')
+      setUpdateGradeForm({ grade: '', percentage: '', remarks: '' })
+      setSelectedStudent(null)
       
       if (selectedCourse) {
         loadGrades(selectedCourse)
@@ -175,6 +191,15 @@ export default function FacultyPage() {
     } catch (err: any) {
       alert(err.message)
     }
+  }
+
+  function handleStudentSelect(grade: any) {
+    setSelectedStudent(grade)
+    setUpdateGradeForm({
+      grade: grade.grade || '',
+      percentage: grade.percentage ? grade.percentage.toString() : '',
+      remarks: grade.remarks || ''
+    })
   }
 
   if (loading) {
@@ -221,76 +246,6 @@ export default function FacultyPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Upload Grade Form */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Upload Grade</h2>
-            
-            <form onSubmit={handleUploadGrade} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Enrollment ID
-                </label>
-                <input
-                  type="text"
-                  value={gradeForm.enrollment_id}
-                  onChange={(e) => setGradeForm({ ...gradeForm, enrollment_id: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter enrollment ID"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Get from course grades table</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Grade
-                </label>
-                <input
-                  type="text"
-                  value={gradeForm.grade}
-                  onChange={(e) => setGradeForm({ ...gradeForm, grade: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="A, B+, C, etc."
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Percentage (Optional)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={gradeForm.percentage}
-                  onChange={(e) => setGradeForm({ ...gradeForm, percentage: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="85.5"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Remarks (Optional)
-                </label>
-                <textarea
-                  value={gradeForm.remarks}
-                  onChange={(e) => setGradeForm({ ...gradeForm, remarks: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  placeholder="Additional comments"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Upload Grade
-              </button>
-            </form>
-          </div>
-
           {/* View Grades */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">View Course Grades</h2>
@@ -303,47 +258,144 @@ export default function FacultyPage() {
                 value={selectedCourse}
                 onChange={(e) => {
                   setSelectedCourse(e.target.value)
+                  setSelectedStudent(null)
+                  setGrades([])
                   if (e.target.value) loadGrades(e.target.value)
                 }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">-- Select a course --</option>
-                {courses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.code} - {course.name}
-                  </option>
-                ))}
+                {courses.length === 0 ? (
+                  <option value="" disabled>No courses found</option>
+                ) : (
+                  courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.code} - {course.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
-            {grades.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                        Student
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                        Grade
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                        Enrollment ID
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {grades.map((grade) => (
-                      <tr key={grade.id}>
-                        <td className="px-4 py-2 text-sm">{grade.student.full_name}</td>
-                        <td className="px-4 py-2 text-sm font-bold">{grade.grade}</td>
-                        <td className="px-4 py-2 text-sm text-gray-500 font-mono text-xs">
-                          {grade.enrollment_id}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {selectedCourse && (
+              <>
+                {grades.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    {loading ? 'Loading students...' : 'No students enrolled in this course yet.'}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                            Student
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                            Grade
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                            Percentage
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {grades.map((grade) => (
+                          <tr
+                            key={grade.id}
+                            onClick={() => handleStudentSelect(grade)}
+                            className={`cursor-pointer transition-colors ${
+                              selectedStudent?.id === grade.id
+                                ? 'bg-blue-50'
+                                : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <td className="px-4 py-2 text-sm">{grade.student?.full_name || 'Unknown Student'}</td>
+                            <td className="px-4 py-2 text-sm font-bold">{grade.grade || 'No Grade'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500">
+                              {grade.percentage ? `${grade.percentage}%` : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Update Grade Form */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {selectedStudent ? 'Update Grade' : 'Select a Student'}
+            </h2>
+            
+            {selectedStudent ? (
+              <form onSubmit={handleUpdateGrade} className="space-y-4">
+                <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                  <div className="text-sm text-gray-600">Student</div>
+                  <div className="font-medium text-gray-900">
+                    {selectedStudent.student?.full_name || 'Unknown'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {selectedStudent.student?.email || ''}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Grade
+                  </label>
+                  <input
+                    type="text"
+                    value={updateGradeForm.grade}
+                    onChange={(e) => setUpdateGradeForm({ ...updateGradeForm, grade: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="A, B+, C, etc."
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Percentage (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={updateGradeForm.percentage}
+                    onChange={(e) => setUpdateGradeForm({ ...updateGradeForm, percentage: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="85.5"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Remarks (Optional)
+                  </label>
+                  <textarea
+                    value={updateGradeForm.remarks}
+                    onChange={(e) => setUpdateGradeForm({ ...updateGradeForm, remarks: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Additional comments"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Update Grade
+                </button>
+              </form>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>Select a course and click on a student to update their grade.</p>
               </div>
             )}
           </div>

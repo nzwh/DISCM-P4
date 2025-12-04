@@ -123,10 +123,11 @@ const enrollService = {
         });
       }
 
-      if (user.profile?.role !== 'student') {
+      // Allow both students and faculty to enroll
+      if (user.profile?.role !== 'student' && user.profile?.role !== 'faculty') {
         return callback({
           code: grpc.status.PERMISSION_DENIED,
-          message: 'Only students can enroll'
+          message: 'Only students and faculty can enroll'
         });
       }
 
@@ -167,23 +168,55 @@ const enrollService = {
         });
       }
 
-      // Check if already enrolled
+      // Check if enrollment already exists (any status)
       const { data: existing } = await supabase
         .from('enrollments')
         .select('*')
         .eq('student_id', user.id)
         .eq('course_id', course_id)
-        .eq('status', 'enrolled')
         .maybeSingle();
 
       if (existing) {
-        return callback({
-          code: grpc.status.ALREADY_EXISTS,
-          message: 'Already enrolled'
-        });
+        // If already enrolled, return error
+        if (existing.status === 'enrolled') {
+          return callback({
+            code: grpc.status.ALREADY_EXISTS,
+            message: 'Already enrolled'
+          });
+        }
+        
+        // If previously dropped, re-enroll by updating status
+        if (existing.status === 'dropped') {
+          const { data: updatedData, error: updateError } = await supabase
+            .from('enrollments')
+            .update({ 
+              status: 'enrolled',
+              enrolled_at: new Date().toISOString()
+            })
+            .eq('id', existing.id)
+            .select()
+            .single();
+
+          if (updateError) throw updateError;
+
+          const enrollment = {
+            id: updatedData.id,
+            student_id: updatedData.student_id,
+            course_id: updatedData.course_id,
+            status: updatedData.status,
+            enrolled_at: updatedData.enrolled_at || '',
+            created_at: updatedData.created_at || '',
+            updated_at: updatedData.updated_at || ''
+          };
+
+          return callback(null, {
+            message: 'Re-enrolled successfully',
+            enrollment: enrollment as Enrollment
+          });
+        }
       }
 
-      // Create enrollment
+      // Create new enrollment
       const { data, error } = await supabase
         .from('enrollments')
         .insert([{

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-import { GraduationCap, Inbox, LayoutGrid, LibraryBig, LogOut, ShieldUser } from 'lucide-react'
+import { ChevronRight, GraduationCap, Inbox, LayoutGrid, LibraryBig, Link, LogOut, ShieldUser } from 'lucide-react'
 import FetchUserProfile from '@/lib/database/FetchUserProfile'
 import { Profile } from '@/lib/types'
 
@@ -88,21 +88,19 @@ export default function Dashboard() {
             icon={<LibraryBig size={18} />}
             description="View all the available courses and enroll to them."
           />
+          <XPanelLink
+            href="/enrollments"
+            title="My Enrollments"
+            icon={<Inbox size={18} />}
+            description="View and manage your current course enrollments."
+          />
           {profile?.role === 'student' && (
-            <>
-              <XPanelLink
-                href="/enrollments"
-                title="My Enrollments"
-                icon={<Inbox size={18} />}
-                description="View all of your currently enrolled courses."
-              />
-              <XPanelLink
-                href="/grades"
-                title="My Grades"
-                icon={<GraduationCap size={18} />}
-                description="View all of your current academic grades."
-              />
-            </>
+            <XPanelLink
+              href="/grades"
+              title="My Grades"
+              icon={<GraduationCap size={18} />}
+              description="View all of your current academic grades."
+            />
           )}
           {profile?.role === 'faculty' && (
             <XPanelLink

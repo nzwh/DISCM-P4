@@ -1,5 +1,7 @@
-const FormatName = (name: string | undefined): string => {
-  if (!name) 
+const FormatName = (name: string | undefined, role?: 'student' | 'faculty'): string => {
+  if (!name && role === 'faculty') 
+    return 'TBA';
+  if (!name)
     return 'User';
 
   return name

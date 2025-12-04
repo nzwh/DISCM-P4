@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkUser = async () => {
+    const checkToken = async () => {
       const token = localStorage.getItem('access_token');
       if (!token)
         return router.push('/');
@@ -40,7 +40,7 @@ export default function Dashboard() {
       setLoading(false);
     }
 
-    checkUser();
+    checkToken();
   }, [router]);
 
   const handleLogout = async () => {

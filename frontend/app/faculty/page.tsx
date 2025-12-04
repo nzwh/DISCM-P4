@@ -188,7 +188,10 @@ export default function FacultyPage() {
       const token = localStorage.getItem('access_token')
       if (!token) return
 
-      await gradeService.updateGrade(token, selectedStudent.id, {
+      // Use grade id if exists, otherwise use enrollment_id (for students without grades)
+      const gradeOrEnrollmentId = selectedStudent.id || selectedStudent.enrollment_id
+      
+      await gradeService.updateGrade(token, gradeOrEnrollmentId, {
         grade: updateGradeForm.grade,
         percentage: updateGradeForm.percentage ? parseFloat(updateGradeForm.percentage) : undefined,
         remarks: updateGradeForm.remarks || undefined

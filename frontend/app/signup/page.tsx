@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Copyright, LibraryBig } from 'lucide-react'
 
@@ -27,33 +26,30 @@ export default function SignupPage() {
     setError('')
 
     try {
-      // Create auth user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+      // Call auth-service via API route
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: fullName || email.split('@')[0],
+          role: 'student'
+        })
       })
 
-      if (error) throw error
+      const data = await response.json()
 
-      // Create profile
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email,
-            full_name: fullName || email.split('@')[0],
-          })
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError)
-        }
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed')
       }
 
-      // Store token
-      if (data.session) {
-        localStorage.setItem('access_token', data.session.access_token)
-        localStorage.setItem('refresh_token', data.session.refresh_token)
+      // Store tokens from auth-service response
+      if (data.access_token) {
+        localStorage.setItem('access_token', data.access_token)
+      }
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token)
       }
 
       router.push('/dashboard')

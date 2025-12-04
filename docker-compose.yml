@@ -14,15 +14,33 @@ services:
     environment:
       - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - AUTH_SERVICE_URL=auth-service:4000
       - COURSE_SERVICE_URL=course-service:4001
       - ENROLL_SERVICE_URL=enroll-service:4002
       - GRADE_SERVICE_URL=grade-service:4003
     ports:
       - "3000:3000"
     depends_on:
+      - auth-service
       - course-service
       - enroll-service
       - grade-service
+    networks:
+      - enrollment-network
+    restart: unless-stopped
+
+  # Auth Service - Handles authentication
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - NODE_ENV=production
     networks:
       - enrollment-network
     restart: unless-stopped

@@ -57,7 +57,22 @@ export default function Dashboard() {
   }, [router]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    const token = localStorage.getItem('access_token');
+    
+    // Call auth-service logout via API route
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-access-token': token || ''
+        }
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+
+    // Clear local tokens regardless of API response
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     

@@ -1,7 +1,10 @@
 import { supabase } from "../supabase";
 import { Profile } from "../types";
 
-const FetchUserProfile = async (userId: string) => {
+const FetchUserProfile = async (userId: string | null | undefined) => {
+  if (!userId) 
+    return null;
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { courseService, enrollService } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -19,13 +18,13 @@ export default function CoursesPage() {
 
   async function loadCourses() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
         router.push('/')
         return
       }
 
-      const data = await courseService.getCourses(session.access_token)
+      const data = await courseService.getCourses(token)
       setCourses(data.courses || [])
     } catch (err: any) {
       setError(err.message)
@@ -37,10 +36,13 @@ export default function CoursesPage() {
   async function handleEnroll(courseId: string) {
     setEnrolling(courseId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        router.push('/')
+        return
+      }
 
-      await enrollService.enroll(session.access_token, courseId)
+      await enrollService.enroll(token, courseId)
       alert('Enrolled successfully!')
     } catch (err: any) {
       alert(err.message)

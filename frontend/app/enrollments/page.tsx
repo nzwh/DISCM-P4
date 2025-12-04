@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { enrollService } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -18,13 +17,13 @@ export default function EnrollmentsPage() {
 
   async function loadEnrollments() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
         router.push('/')
         return
       }
 
-      const data = await enrollService.getEnrollments(session.access_token)
+      const data = await enrollService.getEnrollments(token)
       setEnrollments(data.enrollments || [])
     } catch (err: any) {
       setError(err.message)
@@ -37,10 +36,13 @@ export default function EnrollmentsPage() {
     if (!confirm('Are you sure you want to drop this course?')) return
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        router.push('/')
+        return
+      }
 
-      await enrollService.drop(session.access_token, enrollmentId)
+      await enrollService.drop(token, enrollmentId)
       alert('Course dropped successfully!')
       loadEnrollments()
     } catch (err: any) {

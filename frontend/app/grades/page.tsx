@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { gradeService } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -18,13 +17,13 @@ export default function GradesPage() {
 
   async function loadGrades() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
         router.push('/')
         return
       }
 
-      const data = await gradeService.getGrades(session.access_token)
+      const data = await gradeService.getGrades(token)
       setGrades(data.grades || [])
     } catch (err: any) {
       setError(err.message)

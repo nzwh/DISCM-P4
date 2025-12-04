@@ -58,4 +58,9 @@ export const gradeService = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateGrade: (token: string, gradeId: string, data: any) =>
+    apiCall(`${API_BASE}/api/grades/${gradeId}`, token, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 }

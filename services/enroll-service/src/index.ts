@@ -145,7 +145,7 @@ const enrollService = {
       // Check if section exists and is open
       const { data: section } = await supabase
         .from('sections')
-        .select('*')
+        .select('*, course_id')
         .eq('id', section_id)
         .single();
 
@@ -177,7 +177,29 @@ const enrollService = {
         });
       }
 
-      // Check if enrollment already exists (any status)
+      // Check if student is already enrolled in ANY section of the same course
+      const { data: existingCourseEnrollment } = await supabase
+        .from('students')
+        .select(`
+          *,
+          sections!inner (
+            id,
+            course_id
+          )
+        `)
+        .eq('student_id', user.id)
+        .eq('sections.course_id', section.course_id)
+        .eq('status', 'enrolled')
+        .maybeSingle();
+
+      if (existingCourseEnrollment) {
+        return callback({
+          code: grpc.status.ALREADY_EXISTS,
+          message: 'You are already enrolled in another section of this course'
+        });
+      }
+
+      // Check if enrollment already exists in this specific section (any status)
       const { data: existing } = await supabase
         .from('students')
         .select('*')
@@ -186,11 +208,11 @@ const enrollService = {
         .maybeSingle();
 
       if (existing) {
-        // If already enrolled, return error
+        // If already enrolled in this section, return error
         if (existing.status === 'enrolled') {
           return callback({
             code: grpc.status.ALREADY_EXISTS,
-            message: 'Already enrolled'
+            message: 'Already enrolled in this section'
           });
         }
         

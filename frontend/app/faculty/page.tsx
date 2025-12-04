@@ -6,6 +6,19 @@ import { courseService, gradeService } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+// Format name: converts "gracie.abrams" to "Gracie Abrams"
+function formatName(name: string | undefined): string {
+  if (!name) return 'Unknown'
+
+  const formatted = name
+    .replace(/[._-]/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+  
+  return formatted
+}
+
 export default function FacultyPage() {
   const router = useRouter()
   const [courses, setCourses] = useState<any[]>([])
@@ -310,7 +323,7 @@ export default function FacultyPage() {
                                 : 'hover:bg-gray-50'
                             }`}
                           >
-                            <td className="px-4 py-2 text-sm">{grade.student?.full_name || 'Unknown Student'}</td>
+                            <td className="px-4 py-2 text-sm">{formatName(grade.student?.full_name)}</td>
                             <td className="px-4 py-2 text-sm font-bold">{grade.grade || 'No Grade'}</td>
                             <td className="px-4 py-2 text-sm text-gray-500">
                               {grade.percentage ? `${grade.percentage}%` : '-'}
@@ -336,7 +349,7 @@ export default function FacultyPage() {
                 <div className="bg-gray-50 p-3 rounded-lg mb-4">
                   <div className="text-sm text-gray-600">Student</div>
                   <div className="font-medium text-gray-900">
-                    {selectedStudent.student?.full_name || 'Unknown'}
+                    {formatName(selectedStudent.student?.full_name)}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     {selectedStudent.student?.email || ''}

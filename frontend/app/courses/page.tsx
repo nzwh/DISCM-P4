@@ -6,6 +6,19 @@ import { courseService, enrollService } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+// Format faculty name
+function formatFacultyName(name: string | undefined): string {
+  if (!name) return 'TBA'
+
+  const formatted = name
+    .replace(/[._-]/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+  
+  return formatted
+}
+
 export default function CoursesPage() {
   const router = useRouter()
   const [courses, setCourses] = useState<any[]>([])
@@ -93,9 +106,9 @@ export default function CoursesPage() {
                     {course.code}
                   </h3>
                   <p className="text-gray-700 font-medium">{course.name}</p>
-                  {course.section_name && (
-                    <p className="text-gray-600 text-sm mt-1">Section: {course.section_name}</p>
-                  )}
+                  <p className="text-blue-600 text-sm font-medium mt-1">
+                    {course.section_name}
+                  </p>
                 </div>
 
                 <p className="text-gray-600 text-sm mb-4">
@@ -103,7 +116,7 @@ export default function CoursesPage() {
                 </p>
 
                 <div className="text-sm text-gray-500 mb-4">
-                  <p>Faculty: {course.faculty?.full_name || 'TBA'}</p>
+                  <p>Faculty: {formatFacultyName(course.faculty?.full_name)}</p>
                   <p>{course.semester} {course.year}</p>
                   <p>Max: {course.max_students} students</p>
                 </div>

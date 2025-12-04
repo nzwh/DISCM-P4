@@ -15,6 +15,19 @@ import XLogo from '@/components/Logo'
 import XPanelHeader from '@/components/PanelHeader'
 import XPanelLink from '@/components/PanelLink'
 
+// Format name
+function formatName(name: string | undefined): string {
+  if (!name) return 'User'
+
+  const formatted = name
+    .replace(/[._-]/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+  
+  return formatted
+}
+
 export default function Dashboard() {
   const router = useRouter()
 
@@ -67,10 +80,10 @@ export default function Dashboard() {
           title="Dashboard" 
           icon={<LayoutGrid size={20} />} 
         >
-          <div className="flex flex-row items-center gap-4 text-sm capitalize">
+          <div className="flex flex-row items-center gap-4 text-sm">
             <p className="flex flex-row gap-2">
-              {profile?.full_name}
-              <span className="font-bold">
+              {formatName(profile?.full_name)}
+              <span className="font-bold capitalize">
                 ({profile?.role})
               </span>
             </p>

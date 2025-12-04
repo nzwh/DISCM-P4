@@ -69,6 +69,9 @@ message Course {
   bool is_open = 9;
   string created_at = 10;
   FacultyInfo faculty = 11;
+  string section_id = 12;
+  string section_name = 13;
+  string course_id = 14;
 }
 
 message FacultyInfo {

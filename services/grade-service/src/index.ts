@@ -72,17 +72,21 @@ const gradeService = {
         .from('grades')
         .select(`
           *,
-          enrollments!inner (
+          students!inner (
             id,
-            courses (
-              code,
+            sections (
+              id,
               name,
               semester,
-              year
+              year,
+              courses (
+                code,
+                name
+              )
             )
           )
         `)
-        .eq('enrollments.student_id', auth.user.id)
+        .eq('students.student_id', auth.user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -93,11 +97,11 @@ const gradeService = {
         percentage: g.percentage || 0,
         remarks: g.remarks || '',
         created_at: g.created_at,
-        course: g.enrollments.courses ? {
-          code: g.enrollments.courses.code,
-          name: g.enrollments.courses.name,
-          semester: g.enrollments.courses.semester,
-          year: g.enrollments.courses.year
+        course: g.students?.sections?.courses ? {
+          code: g.students.sections.courses.code,
+          name: g.students.sections.courses.name,
+          semester: g.students.sections.semester,
+          year: g.students.sections.year
         } : null
       }));
 
@@ -113,7 +117,7 @@ const gradeService = {
 
   GetCourseGrades: async (call: any, callback: any) => {
     try {
-      const { token, course_id } = call.request;
+      const { token, section_id } = call.request;
       
       const auth = await authenticateToken(token);
       if (!auth) {
@@ -130,17 +134,17 @@ const gradeService = {
         });
       }
 
-      // Verify faculty owns course
-      const { data: course } = await supabase
-        .from('courses')
+      // Verify faculty owns section
+      const { data: section } = await supabase
+        .from('sections')
         .select('faculty_id')
-        .eq('id', course_id)
+        .eq('id', section_id)
         .single();
 
-      if (!course || course.faculty_id !== auth.user.id) {
+      if (!section || section.faculty_id !== auth.user.id) {
         return callback({
           code: grpc.status.PERMISSION_DENIED,
-          message: 'Cannot view grades for this course'
+          message: 'Cannot view grades for this section'
         });
       }
 
@@ -148,7 +152,7 @@ const gradeService = {
         .from('grades')
         .select(`
           *,
-          enrollments!inner (
+          students!inner (
             id,
             profiles:student_id (
               full_name,
@@ -156,7 +160,7 @@ const gradeService = {
             )
           )
         `)
-        .eq('enrollments.course_id', course_id);
+        .eq('students.section_id', section_id);
 
       if (error) throw error;
 
@@ -166,15 +170,15 @@ const gradeService = {
         percentage: g.percentage || 0,
         remarks: g.remarks || '',
         enrollment_id: g.enrollment_id,
-        student: g.enrollments.profiles ? {
-          full_name: g.enrollments.profiles.full_name,
-          email: g.enrollments.profiles.email
+        student: g.students?.profiles ? {
+          full_name: g.students.profiles.full_name,
+          email: g.students.profiles.email
         } : null
       }));
 
       callback(null, {
         grades,
-        course_id: course_id
+        section_id: section_id
       });
     } catch (error: any) {
       console.error('Error fetching course grades:', error);
@@ -211,29 +215,30 @@ const gradeService = {
         });
       }
 
-      // Verify enrollment belongs to faculty's course
-      const { data: enrollment } = await supabase
-        .from('enrollments')
+      // Verify student enrollment belongs to faculty's section
+      // enrollment_id refers to students.id (the enrollment record)
+      const { data: student } = await supabase
+        .from('students')
         .select(`
           id,
-          courses!inner (
+          sections!inner (
             faculty_id
           )
         `)
         .eq('id', enrollment_id)
         .single();
 
-      if (!enrollment) {
+      if (!student) {
         return callback({
           code: grpc.status.NOT_FOUND,
-          message: 'Enrollment not found'
+          message: 'Student enrollment not found'
         });
       }
 
-      if ((enrollment as any).courses.faculty_id !== auth.user.id) {
+      if ((student as any).sections.faculty_id !== auth.user.id) {
         return callback({
           code: grpc.status.PERMISSION_DENIED,
-          message: 'Cannot upload grade for this enrollment'
+          message: 'Cannot upload grade for this student'
         });
       }
 
@@ -241,7 +246,7 @@ const gradeService = {
       const { data: existingGrade } = await supabase
         .from('grades')
         .select('id')
-        .eq('enrollment_id', enrollment_id)
+        .eq('enrollment_id', student.id)
         .maybeSingle();
 
       if (existingGrade) {
@@ -251,11 +256,11 @@ const gradeService = {
         });
       }
 
-      // Create grade
+      // Create grade - enrollment_id refers to students.id (the enrollment record)
       const { data, error } = await supabase
         .from('grades')
         .insert([{
-          enrollment_id,
+          enrollment_id: student.id,
           grade,
           percentage: percentage || null,
           remarks: remarks || null,
@@ -308,13 +313,13 @@ const gradeService = {
         });
       }
 
-      // Verify grade belongs to faculty's course
+      // Verify grade belongs to faculty's section
       const { data: existingGrade } = await supabase
         .from('grades')
         .select(`
           id,
-          enrollments!inner (
-            courses!inner (
+          students!inner (
+            sections!inner (
               faculty_id
             )
           )
@@ -329,7 +334,7 @@ const gradeService = {
         });
       }
 
-      if ((existingGrade as any).enrollments.courses.faculty_id !== auth.user.id) {
+      if ((existingGrade as any).students.sections.faculty_id !== auth.user.id) {
         return callback({
           code: grpc.status.PERMISSION_DENIED,
           message: 'Cannot update this grade'
@@ -393,13 +398,13 @@ const gradeService = {
         });
       }
 
-      // Verify grade belongs to faculty's course
+      // Verify grade belongs to faculty's section
       const { data: existingGrade } = await supabase
         .from('grades')
         .select(`
           id,
-          enrollments!inner (
-            courses!inner (
+          students!inner (
+            sections!inner (
               faculty_id
             )
           )
@@ -414,7 +419,7 @@ const gradeService = {
         });
       }
 
-      if ((existingGrade as any).enrollments.courses.faculty_id !== auth.user.id) {
+      if ((existingGrade as any).students.sections.faculty_id !== auth.user.id) {
         return callback({
           code: grpc.status.PERMISSION_DENIED,
           message: 'Cannot delete this grade'
@@ -440,7 +445,7 @@ const gradeService = {
 
   GetCourseStats: async (call: any, callback: any) => {
     try {
-      const { token, course_id } = call.request;
+      const { token, section_id } = call.request;
       
       const auth = await authenticateToken(token);
       if (!auth) {
@@ -457,17 +462,17 @@ const gradeService = {
         });
       }
 
-      // Verify ownership
-      const { data: course } = await supabase
-        .from('courses')
+      // Verify ownership - section_id
+      const { data: section } = await supabase
+        .from('sections')
         .select('faculty_id')
-        .eq('id', course_id)
+        .eq('id', section_id)
         .single();
 
-      if (!course || course.faculty_id !== auth.user.id) {
+      if (!section || section.faculty_id !== auth.user.id) {
         return callback({
           code: grpc.status.PERMISSION_DENIED,
-          message: 'Cannot view stats for this course'
+          message: 'Cannot view stats for this section'
         });
       }
 
@@ -475,11 +480,11 @@ const gradeService = {
         .from('grades')
         .select(`
           percentage,
-          enrollments!inner (
-            course_id
+          students!inner (
+            section_id
           )
         `)
-        .eq('enrollments.course_id', course_id);
+        .eq('students.section_id', section_id);
 
       if (error) throw error;
 
@@ -496,7 +501,7 @@ const gradeService = {
         lowest: percentages.length > 0 ? Math.min(...percentages) : 0
       };
 
-      callback(null, { stats, course_id: course_id });
+      callback(null, { stats, section_id: section_id });
     } catch (error: any) {
       console.error('Error fetching stats:', error);
       callback({

@@ -19,7 +19,7 @@ message GetEnrollmentsResponse {
 
 message EnrollRequest {
   string token = 1;
-  string course_id = 2;
+  string section_id = 2;
 }
 
 message EnrollResponse {
@@ -39,22 +39,18 @@ message DropResponse {
 message Enrollment {
   string id = 1;
   string student_id = 2;
-  string course_id = 3;
+  string section_id = 3;
   string status = 4;
   string enrolled_at = 5;
-  string created_at = 6;
-  string updated_at = 7;
 }
 
 message EnrollmentWithCourse {
   string id = 1;
   string student_id = 2;
-  string course_id = 3;
+  string section_id = 3;
   string status = 4;
   string enrolled_at = 5;
-  string created_at = 6;
-  string updated_at = 7;
-  CourseInfo courses = 8;
+  CourseInfo courses = 6;
 }
 
 message CourseInfo {

@@ -38,10 +38,10 @@ export const courseService = {
 
 export const enrollService = {
   getEnrollments: (token: string) => apiCall(`${API_BASE}/api/enrollments`, token),
-  enroll: (token: string, courseId: string) => 
+  enroll: (token: string, sectionId: string) => 
     apiCall(`${API_BASE}/api/enrollments`, token, {
       method: 'POST',
-      body: JSON.stringify({ course_id: courseId }),
+      body: JSON.stringify({ section_id: sectionId }),
     }),
   drop: (token: string, enrollmentId: string) =>
     apiCall(`${API_BASE}/api/enroll/${enrollmentId}`, token, {
@@ -51,8 +51,8 @@ export const enrollService = {
 
 export const gradeService = {
   getGrades: (token: string) => apiCall(`${API_BASE}/api/grades`, token),
-  getCourseGrades: (token: string, courseId: string) =>
-    apiCall(`${API_BASE}/api/grades/course/${courseId}`, token),
+  getCourseGrades: (token: string, sectionId: string) =>
+    apiCall(`${API_BASE}/api/grades/section/${sectionId}`, token),
   uploadGrade: (token: string, data: any) =>
     apiCall(`${API_BASE}/api/grades`, token, {
       method: 'POST',

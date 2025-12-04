@@ -136,7 +136,7 @@ export default function FacultyPage() {
       }
 
       const data = await courseService.getCourses(token)
-      // Filter to only show courses where this faculty is the instructor
+      // Filter to only show sections where this faculty is the instructor
       const facultyCourses = (data.courses || []).filter(
         (course: any) => course.faculty_id === facultyUserId
       )
@@ -146,13 +146,13 @@ export default function FacultyPage() {
     }
   }
 
-  async function loadGrades(courseId: string) {
+  async function loadGrades(sectionId: string) {
     try {
       setLoading(true)
       const token = localStorage.getItem('access_token')
       if (!token) return
 
-      const data = await gradeService.getCourseGrades(token, courseId)
+      const data = await gradeService.getCourseGrades(token, sectionId)
       setGrades(data.grades || [])
       setSelectedStudent(null)
       setUpdateGradeForm({ grade: '', percentage: '', remarks: '' })
@@ -264,13 +264,13 @@ export default function FacultyPage() {
                 }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Select a course --</option>
+                <option value="">-- Select a section --</option>
                 {courses.length === 0 ? (
-                  <option value="" disabled>No courses found</option>
+                  <option value="" disabled>No sections found</option>
                 ) : (
                   courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.code} - {course.name}
+                    <option key={course.id} value={course.section_id || course.id}>
+                      {course.code} - {course.name} {course.section_name ? `(${course.section_name})` : ''}
                     </option>
                   ))
                 )}

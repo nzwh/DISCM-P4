@@ -22,12 +22,12 @@ message GetGradesResponse {
 
 message GetCourseGradesRequest {
   string token = 1;
-  string course_id = 2;
+  string section_id = 2;
 }
 
 message GetCourseGradesResponse {
   repeated GradeWithStudent grades = 1;
-  string course_id = 2;
+  string section_id = 2;
 }
 
 message UploadGradeRequest {
@@ -67,12 +67,12 @@ message DeleteGradeResponse {
 
 message GetCourseStatsRequest {
   string token = 1;
-  string course_id = 2;
+  string section_id = 2;
 }
 
 message GetCourseStatsResponse {
   CourseStats stats = 1;
-  string course_id = 2;
+  string section_id = 2;
 }
 
 message Grade {

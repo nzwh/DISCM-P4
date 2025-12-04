@@ -27,10 +27,10 @@ function getGradeClient() {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ courseId: string }> }
+  { params }: { params: Promise<{ sectionId: string }> }
 ) {
   try {
-    const { courseId } = await params;
+    const { sectionId } = await params;
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.split(' ')[1] || request.headers.get('x-access-token');
     
@@ -42,7 +42,7 @@ export async function GET(
     
     return new Promise<NextResponse>((resolve) => {
       client.GetCourseGrades(
-        { token, section_id: courseId },
+        { token, section_id: sectionId },
         (error: any, response: any) => {
           if (error) {
             console.error('gRPC error:', error);
@@ -50,7 +50,7 @@ export async function GET(
               : error.code === grpc.status.PERMISSION_DENIED ? 403
               : 500;
             resolve(NextResponse.json(
-              { error: error.message || 'Failed to fetch course grades' },
+              { error: error.message || 'Failed to fetch section grades' },
               { status }
             ));
           } else {

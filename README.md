@@ -31,15 +31,13 @@ After the installation process, ensure that Docker is running, then build and ru
 docker-compose up --build
 ```
 
-Once the containers finish building, the web application (frontend) is accessible at: \
-https://localhost:3000 (3000:3000)
+Once the containers finish building, the web application (frontend) is accessible at: https://localhost:3000 (`3000:3000`)
 
-Each backend service is also accessible through their respective URLs:
-- **Course Service**: https://localhost:4001 (4001:4001)
-- **Enroll Service**: https://localhost:4002 (4002:4002)
-- **Grade Service**: https://localhost:4003 (4003:4003)
-
-A simple health endpoint for each service may also be accessed to verify if it is currently running by attaching /health at the end of the URL. For example: \
-https://localhost:4001/health
+Each backend service also run on their own internal ports:
+- **Auth Service**: `4000:4000`
+- **Course Service**: `4001:4001`
+- **Enroll Service**: `4002:4002`
+- **Grade Service**: `4003:4003`
 
 The running containers may also be viewed or managed directly from Docker Desktop.
+

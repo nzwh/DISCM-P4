@@ -57,14 +57,23 @@ export default function CoursesPage() {
     setEnrolling(sectionId)
     try {
       const token = localStorage.getItem('access_token')
-      if (!token)
-        return router.push('/');
+      if (!token) {
+        router.push('/')
+        return
+      }
 
       await enrollService.enroll(token, sectionId)
       alert('Enrolled successfully!')
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : String(error));
+      setError(error instanceof Error ? error.message : String(error))
+      if (error instanceof Error && 
+        (error.message.includes('Unauthorized') || error.message.includes('Invalid'))) {
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        router.push('/')
+      }
     } finally {
+      setLoading(false)
       setEnrolling(null);
     }
   }

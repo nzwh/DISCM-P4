@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-import { ChevronRight, GraduationCap, Inbox, LayoutGrid, LibraryBig, Link, LogOut, ShieldUser } from 'lucide-react'
-import FetchUserProfile from '@/lib/database/FetchUserProfile'
+import { GraduationCap, Inbox, LayoutGrid, LibraryBig, LogOut, ShieldUser } from 'lucide-react'
 import { Profile } from '@/lib/types'
+import FetchUserProfile from '@/lib/database/FetchUserProfile'
 
 import XActionButton from '@/components/ActionButton'
 import XBackground from '@/components/Background'
@@ -14,19 +14,7 @@ import XContainer from '@/components/Container'
 import XLogo from '@/components/Logo'
 import XPanelHeader from '@/components/PanelHeader'
 import XPanelLink from '@/components/PanelLink'
-
-// Format name
-function formatName(name: string | undefined): string {
-  if (!name) return 'User'
-
-  const formatted = name
-    .replace(/[._-]/g, ' ')
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ')
-  
-  return formatted
-}
+import FormatName from '@/lib/functions/FormatName'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -36,13 +24,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     const checkUser = async () => {
-
       const token = localStorage.getItem('access_token');
       if (!token)
         return router.push('/');
 
       const { data: { user }, error } = await supabase.auth.getUser(token);
-      const profile = await FetchUserProfile(user?.id || '');
+      const profile = await FetchUserProfile(user?.id);
       if (error || !user || !profile) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
@@ -59,7 +46,6 @@ export default function Dashboard() {
   const handleLogout = async () => {
     const token = localStorage.getItem('access_token');
     
-    // Call auth-service logout via API route
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
@@ -72,10 +58,8 @@ export default function Dashboard() {
       console.error('Logout error:', error);
     }
 
-    // Clear local tokens regardless of API response
     localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    
+    localStorage.removeItem('refresh_token');    
     router.push('/');
   }
 
@@ -97,7 +81,7 @@ export default function Dashboard() {
         >
           <div className="flex flex-row items-center gap-4 text-sm">
             <p className="flex flex-row gap-2">
-              {formatName(profile?.full_name)}
+              {FormatName(profile?.full_name)}
               <span className="font-bold capitalize">
                 ({profile?.role})
               </span>

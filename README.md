@@ -13,6 +13,14 @@ cd frontend
 npm install
 ```
 ```
+cd ../services/auth-service
+npm install
+```
+```
+cd ../services/course-service
+npm install
+```
+```
 cd ../services/course-service
 npm install
 ```
@@ -40,4 +48,5 @@ Each backend service also run on their own internal ports:
 - **Grade Service**: `4003:4003`
 
 The running containers may also be viewed or managed directly from Docker Desktop.
+
 

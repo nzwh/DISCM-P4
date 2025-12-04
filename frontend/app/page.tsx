@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link';
 
 import { Info, LogIn, RectangleEllipsis } from 'lucide-react';
 
@@ -27,7 +28,6 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Call auth-service via API route
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -35,12 +35,10 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store tokens from auth-service response
       if (data.access_token) {
         localStorage.setItem('access_token', data.access_token);
       }
@@ -98,9 +96,9 @@ export default function LoginPage() {
 
         <aside className="flex flex-row justify-between items-center gap-1 text-sm">
           <p> Don&apos;t have an account? </p>
-          <a href="/signup" className="mr-auto font-semibold hover:text-slate-600 hover:underline">
+          <Link href="/signup" className="mr-auto font-semibold hover:text-slate-600 hover:underline">
             Sign up here.
-          </a>
+          </Link>
           <XLogo />
         </aside>
 

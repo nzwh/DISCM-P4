@@ -148,33 +148,50 @@ const gradeService = {
         });
       }
 
-      const { data, error } = await supabase
-        .from('grades')
+      // Get all enrolled students for this section
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('students')
         .select(`
-          *,
-          students!inner (
-            id,
-            profiles:student_id (
-              full_name,
-              email
-            )
+          id,
+          student_id,
+          profiles:student_id (
+            full_name,
+            email
           )
         `)
-        .eq('students.section_id', section_id);
+        .eq('section_id', section_id);
 
-      if (error) throw error;
+      if (enrollError) throw enrollError;
 
-      const grades = (data || []).map((g: any) => ({
-        id: g.id,
-        grade: g.grade,
-        percentage: g.percentage || 0,
-        remarks: g.remarks || '',
-        enrollment_id: g.enrollment_id,
-        student: g.students?.profiles ? {
-          full_name: g.students.profiles.full_name,
-          email: g.students.profiles.email
-        } : null
-      }));
+      // Get all grades for these enrollments
+      const enrollmentIds = (enrollments || []).map((e: any) => e.id);
+      const { data: gradeRecords, error: gradeError } = await supabase
+        .from('grades')
+        .select('id, enrollment_id, grade, percentage, remarks')
+        .in('enrollment_id', enrollmentIds);
+
+      if (gradeError) throw gradeError;
+
+      // Create a map of enrollment_id -> grade for quick lookup
+      const gradeMap = new Map();
+      (gradeRecords || []).forEach((g: any) => {
+        gradeMap.set(g.enrollment_id, g);
+      });
+
+      const grades = (enrollments || []).map((enrollment: any) => {
+        const gradeRecord = gradeMap.get(enrollment.id) || null;
+        return {
+          id: gradeRecord?.id || null,
+          grade: gradeRecord?.grade || null,
+          percentage: gradeRecord?.percentage || 0,
+          remarks: gradeRecord?.remarks || '',
+          enrollment_id: enrollment.id,
+          student: enrollment.profiles ? {
+            full_name: enrollment.profiles.full_name,
+            email: enrollment.profiles.email
+          } : null
+        };
+      });
 
       callback(null, {
         grades,
@@ -313,62 +330,89 @@ const gradeService = {
         });
       }
 
-      // Verify grade belongs to faculty's section
-      const { data: existingGrade } = await supabase
-        .from('grades')
-        .select(`
-          id,
-          students!inner (
-            sections!inner (
-              faculty_id
-            )
-          )
-        `)
-        .eq('id', id)
-        .single();
+      // Determine if id is a grade ID or enrollment ID, and get the enrollment_id
+      let enrollmentId: string | null = null;
+      let facultyId: string | null = null;
 
-      if (!existingGrade) {
+      // First, check if id is a grade ID
+      const { data: gradeRecord } = await supabase
+        .from('grades')
+        .select('enrollment_id')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (gradeRecord) {
+        enrollmentId = gradeRecord.enrollment_id;
+      } else {
+        // Check if id is an enrollment ID (students table)
+        const { data: enrollment } = await supabase
+          .from('students')
+          .select('id')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (enrollment) {
+          enrollmentId = enrollment.id;
+        }
+      }
+
+      if (!enrollmentId) {
         return callback({
           code: grpc.status.NOT_FOUND,
-          message: 'Grade not found'
+          message: 'Grade or enrollment not found'
         });
       }
 
-      if ((existingGrade as any).students.sections.faculty_id !== auth.user.id) {
+      // Verify faculty owns the section for this enrollment
+      const { data: enrollmentSection } = await supabase
+        .from('students')
+        .select('sections!inner(faculty_id)')
+        .eq('id', enrollmentId)
+        .single();
+
+      if (!enrollmentSection) {
+        return callback({
+          code: grpc.status.NOT_FOUND,
+          message: 'Enrollment not found'
+        });
+      }
+
+      facultyId = (enrollmentSection as any).sections.faculty_id;
+      if (facultyId !== auth.user.id) {
         return callback({
           code: grpc.status.PERMISSION_DENIED,
-          message: 'Cannot update this grade'
+          message: 'Cannot modify grade for this student'
         });
       }
 
-      // Update grade
-      const updateData: any = {};
-      if (grade !== undefined && grade !== '') updateData.grade = grade;
-      if (percentage !== undefined) updateData.percentage = percentage;
-      if (remarks !== undefined) updateData.remarks = remarks;
-
+      // Use upsert to either update existing or create new grade
       const { data, error } = await supabase
         .from('grades')
-        .update(updateData)
-        .eq('id', id)
+        .upsert({
+          enrollment_id: enrollmentId,
+          grade: grade || null,
+          percentage: percentage || null,
+          remarks: remarks || null,
+          uploaded_by: auth.user.id
+        }, {
+          onConflict: 'enrollment_id'
+        })
         .select()
         .single();
 
       if (error) throw error;
 
-      const gradeData = {
-        id: data.id,
-        enrollment_id: data.enrollment_id,
-        grade: data.grade,
-        percentage: data.percentage || 0,
-        remarks: data.remarks || '',
-        uploaded_by: data.uploaded_by,
-        created_at: data.created_at
-      };
-
       callback(null, {
-        message: 'Grade updated successfully',
-        grade: gradeData
+        message: 'Grade saved successfully',
+        grade: {
+          id: data.id,
+          enrollment_id: data.enrollment_id,
+          grade: data.grade,
+          percentage: data.percentage || 0,
+          remarks: data.remarks || '',
+          uploaded_by: data.uploaded_by,
+          created_at: data.created_at
+        }
       });
     } catch (error: any) {
       console.error('Error updating grade:', error);
